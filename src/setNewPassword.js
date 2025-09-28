@@ -1,68 +1,61 @@
 const {
   CognitoIdentityProviderClient,
-  InitiateAuthCommand
+  RespondToAuthChallengeCommand
 } = require("@aws-sdk/client-cognito-identity-provider");
 
 const client = new CognitoIdentityProviderClient({});
 
 /**
- * POST /auth/login
- * Body: { "username": "email@dominio.com", "password": "Passw0rd!" }
+ * POST /setNewPassword
+ * Body: { "username": "email@dominio.com", "newPassword": "NuevaPassword123!", "session": "session_token" }
  * Respuesta: { idToken, accessToken, refreshToken, expiresIn }
  */
 module.exports.handler = async (event) => {
   try {
-    const { username, password } = JSON.parse(event.body || "{}");
+    const { username, newPassword, session } = JSON.parse(event.body || "{}");
 
-    if (!username || !password) {
-      return response(400, { ok: false, error: "username y password son obligatorios" });
+    if (!username || !newPassword || !session) {
+      return response(400, { ok: false, error: "username, newPassword y session son obligatorios" });
     }
 
-    const cmd = new InitiateAuthCommand({
-      AuthFlow: "USER_PASSWORD_AUTH",
+    const cmd = new RespondToAuthChallengeCommand({
       ClientId: process.env.USER_POOL_CLIENT_ID,
-      AuthParameters: {
+      ChallengeName: "NEW_PASSWORD_REQUIRED",
+      Session: session,
+      ChallengeResponses: {
         USERNAME: username,
-        PASSWORD: password
+        NEW_PASSWORD: newPassword
       }
     });
 
     const out = await client.send(cmd);
 
-    if (out.ChallengeName === 'NEW_PASSWORD_REQUIRED') {
-      return response(200, { 
-        ok: false, 
-        challenge: out.ChallengeName,
-        session: out.Session,
-        message: "Se requiere nueva contraseña. Use el endpoint /setNewPassword"
-      });
-    } else if (out.ChallengeName) {
+    if (out.ChallengeName) {
       return response(403, { ok: false, challenge: out.ChallengeName, session: out.Session });
     }
 
     const auth = out.AuthenticationResult || {};
     return response(200, {
       ok: true,
+      message: "Contraseña actualizada exitosamente",
       idToken: auth.IdToken,
       accessToken: auth.AccessToken,
       refreshToken: auth.RefreshToken,
       expiresIn: auth.ExpiresIn
     });
   } catch (err) {
-    console.error("Login error:", err);
+    console.error("SetNewPassword error:", err);
     
-    let errorMessage = "Error de autenticación";
-    let statusCode = 401;
+    let errorMessage = "Error al establecer nueva contraseña";
+    let statusCode = 400;
     
-    if (err.name === 'NotAuthorizedException') {
-      errorMessage = "Usuario o contraseña incorrectos";
-    } else if (err.name === 'UserNotConfirmedException') {
-      errorMessage = "Usuario no confirmado. Revisa tu email";
-    } else if (err.name === 'UserNotFoundException') {
-      errorMessage = "Usuario no existe";
+    if (err.name === 'InvalidPasswordException') {
+      errorMessage = "La contraseña no cumple los requisitos de política";
     } else if (err.name === 'InvalidParameterException') {
       errorMessage = "Parámetros inválidos";
-      statusCode = 400;
+    } else if (err.name === 'ExpiredCodeException') {
+      errorMessage = "La sesión ha expirado. Inicie sesión nuevamente";
+      statusCode = 401;
     }
     
     return response(statusCode, { ok: false, error: errorMessage, details: err.message });

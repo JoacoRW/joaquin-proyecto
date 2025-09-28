@@ -3,16 +3,26 @@ frameworkVersion: '3'
 
 provider:
   name: aws
-  runtime: nodejs20.x
-  region: us-east-1
+  runtime: nodejs18.x
+  region: ${opt:region, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
   role: arn:aws:iam::851725393529:role/LabRole
-  iamRoleStatements:
-    - Effect: Allow
-      Action:
-        - dynamodb:*
-        - cognito-idp:*
-        - lambda:InvokeFunction
-      Resource: "*"
+  environment:
+    USER_POOL_ID: { Ref: CognitoUserPool }
+    USER_POOL_CLIENT_ID: { Ref: CognitoUserPoolClient }
+  logs:
+    httpApi: true
+  httpApi:
+    authorizers:
+      cognitoJwt:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl:
+          Fn::Sub:
+            - https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}
+            - { UserPoolId: { Ref: CognitoUserPool } }
+        audience:
+          - { Ref: CognitoUserPoolClient }
 
 plugins:
   - serverless-offline
@@ -26,6 +36,22 @@ functions:
           method: post
           cors: true
 
+  refresh:
+    handler: src/refresh.refresh
+    events:
+      - httpApi:
+          method: POST
+          path: /auth/refresh
+
+  me:
+    handler: src/me.me
+    events:
+      - httpApi:
+          method: GET
+          path: /me
+          authorizer:
+            name: cognitoJwt
+
   createUser:
     handler: src/createUser.handler
     events:
@@ -34,8 +60,83 @@ functions:
           method: post
           cors: true
 
+  personalize:
+    handler: src/personalize.handler
+    events:
+      - http:
+          path: /personalize
+          method: post
+          cors: true
+
+  setNewPassword:
+    handler: src/setNewPassword.handler
+    events:
+      - http:
+          path: /setNewPassword
+          method: post
+          cors: true
+
+  listSpaces:
+    handler: src/listSpaces.handler
+    events:
+      - http:
+          path: /listSpaces
+          method: get
+          cors: true
+
+  agendar:
+    handler: src/agendar.handler
+    events:
+      - http:
+          path: /agendar
+          method: post
+          cors: true
+
+package:
+  individually: true
+  patterns:
+    - '!**/*.md'
+    - '!**/*.test.*'
+  
+
+
+
 resources:
   Resources:
+    CognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: ${self:service}-${sls:stage}-pool
+        UsernameAttributes:
+          - email
+        AutoVerifiedAttributes:
+          - email
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 8
+            RequireLowercase: true
+            RequireNumbers: true
+            RequireSymbols: false
+            RequireUppercase: true
+
+    CognitoUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: ${self:service}-${sls:stage}-app
+        GenerateSecret: false
+        UserPoolId: { Ref: CognitoUserPool }
+        PreventUserExistenceErrors: ENABLED
+        ExplicitAuthFlows:
+          - ALLOW_USER_PASSWORD_AUTH
+          - ALLOW_REFRESH_TOKEN_AUTH
+        AccessTokenValidity: 60
+        IdTokenValidity: 60
+        RefreshTokenValidity: 30
+        TokenValidityUnits:
+          AccessToken: minutes
+          IdToken: minutes
+          RefreshToken: days
+    
     PermisosTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -53,6 +154,7 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 5
           WriteCapacityUnits: 5
+        # Ejemplo de datos: { userId: "sub-del-jwt", clienteId: "hospitalA", permissions: ["agendar", "ver", "admin"] }
 
     PersonalizacionTable:
       Type: AWS::DynamoDB::Table
@@ -71,3 +173,88 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 5
           WriteCapacityUnits: 5
+        # Ejemplo de datos: { clienteId: "hospitalA", clave: "color_fondo", valor: "#FFFFFF", estilo: "background-color: #FFFFFF" }
+        # Consulta: Por clienteId para cargar todas las personalizaciones de un usuario/cliente
+
+    EspaciosTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: espacios
+        AttributeDefinitions:
+          - AttributeName: espacioId
+            AttributeType: S
+          - AttributeName: tipoEspacio
+            AttributeType: S
+        KeySchema:
+          - AttributeName: espacioId
+            KeyType: HASH
+          - AttributeName: tipoEspacio
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        # Ejemplo de datos: { espacioId: "box1", tipoEspacio: "hospital_box", disponible: true, clienteId: "hospitalA", descripcion: "Box para pacientes" }
+        # Consulta: Por espacioId o tipoEspacio para listar disponibles
+
+    ReservasTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: reservas
+        AttributeDefinitions:
+          - AttributeName: reservaId
+            AttributeType: S
+          - AttributeName: fecha
+            AttributeType: S
+          - AttributeName: espacioId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: reservaId
+            KeyType: HASH
+          - AttributeName: fecha
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: EspacioFechaIndex
+            KeySchema:
+              - AttributeName: espacioId
+                KeyType: HASH
+              - AttributeName: fecha
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 5
+              WriteCapacityUnits: 5
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        # Ejemplo de datos: { reservaId: "uuid", fecha: "2025-09-28T15:00", espacioId: "box1", userId: "sub-del-jwt", estado: "reservado", clienteId: "hospitalA" }
+        # Consulta: Por reservaId, o por espacioId + fecha para verificar disponibilidad
+
+    AuditoriaTable:  # Opcional: Para logs de acciones
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: auditoria
+        AttributeDefinitions:
+          - AttributeName: logId
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: S
+        KeySchema:
+          - AttributeName: logId
+            KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        # Ejemplo de datos: { logId: "uuid", timestamp: "2025-09-28T15:00", userId: "sub", acción: "reserva-creada", detalles: "Espacio box1 reservado" }
+        # Consulta: Por timestamp para logs históricos
+
+  Outputs:
+    WebPageUrl:
+      Description: "URL para abrir la pagina web local"
+      Value: "http://localhost:8000"
+    
+    WebPageInstructions:
+      Description: "Comando para iniciar servidor"
+      Value: "npm run start-web"

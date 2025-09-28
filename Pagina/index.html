@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Autenticación - Joaquín Proyecto</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="auth-card" id="loginCard">
+            <h2><i class="fas fa-user-circle"></i> Iniciar Sesión</h2>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginUsername">
+                        <i class="fas fa-envelope"></i> Correo Electrónico
+                    </label>
+                    <input type="email" id="loginUsername" placeholder="usuario@ejemplo.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="loginPassword">
+                        <i class="fas fa-lock"></i> Contraseña
+                    </label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                </button>
+                
+                <div class="divider">
+                    <span>o</span>
+                </div>
+                
+                <p class="register-text">
+                    ¿No tienes una cuenta? 
+                    <a href="#" id="showRegister">Haz clic aquí para crear una</a>
+                </p>
+            </form>
+            
+            <div id="loginMessage" class="message"></div>
+        </div>
+
+        <!-- Card de Registro (inicialmente oculta) -->
+        <div class="auth-card hidden" id="registerCard">
+            <h2><i class="fas fa-user-plus"></i> Crear Cuenta</h2>
+            
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="registerUsername">
+                        <i class="fas fa-user"></i> Nombre de Usuario
+                    </label>
+                    <input type="text" id="registerUsername" placeholder="nombreusuario" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="registerEmail">
+                        <i class="fas fa-envelope"></i> Correo Electrónico
+                    </label>
+                    <input type="email" id="registerEmail" placeholder="usuario@ejemplo.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="registerPassword">
+                        <i class="fas fa-lock"></i> Contraseña Temporal
+                    </label>
+                    <input type="password" id="registerPassword" placeholder="••••••••" required>
+                    <small class="password-hint">
+                        Mínimo 8 caracteres, incluye mayúsculas, minúsculas y números
+                    </small>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-user-plus"></i> Crear Cuenta
+                </button>
+                
+                <div class="divider">
+                    <span>o</span>
+                </div>
+                
+                <p class="register-text">
+                    ¿Ya tienes cuenta? 
+                    <a href="#" id="showLogin">Volver al login</a>
+                </p>
+            </form>
+            
+            <div id="registerMessage" class="message"></div>
+        </div>
+
+        <!-- Card de Nueva Contraseña (para el challenge) -->
+        <div class="auth-card hidden" id="newPasswordCard">
+            <h2><i class="fas fa-key"></i> Establecer Nueva Contraseña</h2>
+            
+            <p class="info-text">
+                <i class="fas fa-info-circle"></i> 
+                Debes establecer una nueva contraseña para completar el registro
+            </p>
+            
+            <form id="newPasswordForm">
+                <div class="form-group">
+                    <label for="newPasswordUsername">
+                        <i class="fas fa-user"></i> Usuario
+                    </label>
+                    <input type="text" id="newPasswordUsername" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="newPassword">
+                        <i class="fas fa-lock"></i> Nueva Contraseña
+                    </label>
+                    <input type="password" id="newPassword" placeholder="••••••••" required>
+                    <small class="password-hint">
+                        Mínimo 8 caracteres, incluye mayúsculas, minúsculas y números
+                    </small>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-check"></i> Establecer Contraseña
+                </button>
+            </form>
+            
+            <div id="newPasswordMessage" class="message"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

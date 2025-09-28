@@ -1,7 +1,7 @@
 const { CognitoIdentityProviderClient, AdminCreateUserCommand } = require("@aws-sdk/client-cognito-identity-provider");
 
 const client = new CognitoIdentityProviderClient({ region: "us-east-1" });
-const userPoolId = "us-east-1_qVjKBhjDp"; // Reemplaza con el ID de tu User Pool (e.g., us-east-1_abc123)
+const userPoolId = process.env.USER_POOL_ID;
 
 module.exports.handler = async (event) => {
   try {
@@ -36,12 +36,24 @@ module.exports.handler = async (event) => {
 
     return {
       statusCode: 201,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
+      },
       body: JSON.stringify({ message: `User ${username} created successfully`, user: response.User })
     };
   } catch (error) {
     console.error("Error creating user:", error);
     return {
       statusCode: 400,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type", 
+        "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
+      },
       body: JSON.stringify({ error: 'Failed to create user: ' + error.message })
     };
   }
