@@ -3,8 +3,9 @@ frameworkVersion: '3'
 
 provider:
   name: aws
-  runtime: nodejs18.x
-  region: us-east-1  # Usa tu región preferida
+  runtime: nodejs20.x
+  region: us-east-1
+  role: arn:aws:iam::851725393529:role/LabRole
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -17,8 +18,56 @@ plugins:
   - serverless-offline
 
 functions:
-  # Agregaremos funciones aquí más adelante
+  login:
+    handler: src/login.handler
+    events:
+      - http:
+          path: /login
+          method: post
+          cors: true
+
+  createUser:
+    handler: src/createUser.handler
+    events:
+      - http:
+          path: /createUser
+          method: post
+          cors: true
 
 resources:
   Resources:
-    # Agregaremos tablas DynamoDB aquí
+    PermisosTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: permisos
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: clienteId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: clienteId
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+
+    PersonalizacionTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: personalizacion
+        AttributeDefinitions:
+          - AttributeName: clienteId
+            AttributeType: S
+          - AttributeName: clave
+            AttributeType: S
+        KeySchema:
+          - AttributeName: clienteId
+            KeyType: HASH
+          - AttributeName: clave
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
