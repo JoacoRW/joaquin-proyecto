@@ -1,0 +1,24 @@
+service: joaquin-proyecto
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1  # Usa tu región preferida
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:*
+        - cognito-idp:*
+        - lambda:InvokeFunction
+      Resource: "*"
+
+plugins:
+  - serverless-offline
+
+functions:
+  # Agregaremos funciones aquí más adelante
+
+resources:
+  Resources:
+    # Agregaremos tablas DynamoDB aquí

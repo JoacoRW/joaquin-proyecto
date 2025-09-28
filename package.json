@@ -1,0 +1,18 @@
+{
+  "name": "joaquin-proyecto",
+  "version": "1.0.0",
+  "description": "Proyecto serverless para agendar espacios",
+  "main": "index.js",
+  "scripts": {
+    "deploy": "serverless deploy",
+    "offline": "serverless offline start",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["serverless", "aws", "lambda"],
+  "author": "Joaquin",
+  "license": "ISC",
+  "devDependencies": {
+    "serverless": "^3.38.0",
+    "serverless-offline": "^13.3.0"
+  }
+}
