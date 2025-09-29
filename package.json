@@ -9,7 +9,8 @@
     "web": "cd Pagina && python -m http.server 8000",
     "start-web": "powershell -File start-web.ps1",
     "deploy-and-web": "serverless deploy && npm run web",
-    "web-only": "cd Pagina && start http://localhost:8000 && python -m http.server 8000"
+    "web-only": "cd Pagina && start http://localhost:8000 && python -m http.server 8000",
+    "seed": "node runSeed.js"
   },
   "author": "Joaquin",
   "license": "ISC",

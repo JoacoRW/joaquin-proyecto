@@ -46,11 +46,10 @@ functions:
   me:
     handler: src/me.me
     events:
-      - httpApi:
-          method: GET
+      - http:
           path: /me
-          authorizer:
-            name: cognitoJwt
+          method: get
+          cors: true
 
   createUser:
     handler: src/createUser.handler
@@ -89,6 +88,30 @@ functions:
     events:
       - http:
           path: /agendar
+          method: post
+          cors: true
+
+  seedData:
+    handler: src/seedData.handler
+    events:
+      - http:
+          path: /seedData
+          method: post
+          cors: true
+
+  getReservas:
+    handler: src/getReservas.handler
+    events:
+      - http:
+          path: /getReservas
+          method: get
+          cors: true
+
+  agendarReserva:
+    handler: src/agendarReserva.handler
+    events:
+      - http:
+          path: /agendarReserva
           method: post
           cors: true
 

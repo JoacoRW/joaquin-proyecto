@@ -8,7 +8,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         .dashboard {
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -27,7 +27,7 @@
             padding: 30px;
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
+            margin-bottom: 30px;
         }
         
         .logout-btn {
@@ -42,6 +42,50 @@
         
         .logout-btn:hover {
             background: #c82333;
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .stat-card h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .stat-card p {
+            font-size: 24px;
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .agendar-btn {
+            background: #28a745;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+            display: block;
+        }
+        
+        .agendar-btn:hover {
+            background: #218838;
         }
     </style>
 </head>
@@ -61,6 +105,29 @@
                 <p><i class="fas fa-spinner fa-spin"></i> Cargando información...</p>
             </div>
         </div>
+        
+        <div class="stats-container" id="statsContainer">
+            <div class="stat-card">
+                <h3>Espacios Disponibles</h3>
+                <p id="disponibles">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Espacios Ocupados</h3>
+                <p id="ocupados">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Total de Espacios</h3>
+                <p id="totales">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Usados este Mes</h3>
+                <p id="usadosMes">0</p>
+            </div>
+        </div>
+        
+        <button class="agendar-btn" onclick="window.location.href='agenda.html'">
+            <i class="fas fa-calendar-plus"></i> Agendar
+        </button>
     </div>
 
     <script>
@@ -68,6 +135,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             checkAuth();
             loadUserInfo();
+            loadSpaceStats();
         });
         
         function checkAuth() {
@@ -82,15 +150,38 @@
         async function loadUserInfo() {
             const idToken = localStorage.getItem('idToken');
             
+            console.log('Token desde localStorage:', idToken ? `Token existe (${idToken.length} chars)` : 'No token');
+            console.log('Token completo:', idToken);
+            
+            if (!idToken) {
+                document.getElementById('userData').innerHTML = `
+                    <p style="color: red;">No hay token de autenticación</p>
+                `;
+                return;
+            }
+            
             try {
-                const response = await fetch('https://saex8k8zpc.execute-api.us-east-1.amazonaws.com/me', {
+                const response = await fetch('https://2l83g90ljg.execute-api.us-east-1.amazonaws.com/dev/me', {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${idToken}`
                     }
                 });
                 
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        document.getElementById('userData').innerHTML = `
+                            <p style="color: red;">Token expirado o inválido. <a href="index.html">Volver a iniciar sesión</a></p>
+                        `;
+                        return;
+                    }
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
+                console.log('Data received:', data);
                 
                 if (data.ok) {
                     document.getElementById('userData').innerHTML = `
@@ -108,6 +199,42 @@
                 document.getElementById('userData').innerHTML = `
                     <p style="color: red;">Error de conexión: ${error.message}</p>
                 `;
+            }
+        }
+        
+        async function loadSpaceStats() {
+            const idToken = localStorage.getItem('idToken');
+            if (!idToken) return;
+
+            try {
+                const response = await fetch('https://2l83g90ljg.execute-api.us-east-1.amazonaws.com/dev/listSpaces', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${idToken}`
+                    }
+                });
+                const data = await response.json();
+
+                if (data.spaces) {
+                    const spaces = data.spaces;
+                    const totales = spaces.length;
+                    const disponibles = spaces.filter(s => s.disponible).length;
+                    const ocupados = totales - disponibles;
+
+                    // Usados este mes (simulación básica; ajustar con reservas)
+                    const now = new Date();
+                    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+                    const usadosMes = spaces.filter(s => !s.disponible && new Date(s.ultimaReserva || '1970-01-01') >= new Date(startOfMonth)).length;
+
+                    document.getElementById('disponibles').textContent = disponibles;
+                    document.getElementById('ocupados').textContent = ocupados;
+                    document.getElementById('totales').textContent = totales;
+                    document.getElementById('usadosMes').textContent = usadosMes;
+                } else {
+                    document.getElementById('statsContainer').innerHTML = '<p style="color: red;">Error al cargar estadísticas</p>';
+                }
+            } catch (error) {
+                document.getElementById('statsContainer').innerHTML = '<p style="color: red;">Error de conexión: ' + error.message + '</p>';
             }
         }
         
